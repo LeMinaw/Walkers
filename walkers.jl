@@ -2,13 +2,29 @@ module Walkers
 
 using GLAbstraction, Colors, GeometryTypes, GLVisualize, Reactive, GLWindow
 import GLVisualize: mm, widget, button, slider, labeled_slider
-
+import Base./
 # import Colors: RGBA, colormap
 # import GeometryTypes: Vec2f0, Point3f0
 # import Reactive: Signal, map, value, preserve
 # import GLWindow: Screen
 # import GLAbstraction: rotationmatrix_z
 # import GLVisualize: glscreen, _view, visualize, renderloop, x_partition_abs, loop, center!
+
+function /(k::Int, pt::Point{})
+    k ./ pt
+end
+
+function replacenan!{T}(mat::Array{T})
+    mat[isnan(x)] = zero(T)
+end
+
+function nulldiagonal{T}(mat::Array{T})
+    triu(mat, 1) + tril(mat, -1)
+end
+
+function normalize{T}(mat::Array{T})
+    r = nulldiagonal(mat ./ norm.(mat))
+end
 
 function scatter(x::Any, avg=0::Real, width=1::Rand)
     x * 2width - width + avg
@@ -27,12 +43,20 @@ function offsetcols(mat::Array{T, 2}) where T
     mat[:, perms]
 end
 
-function walk(n, pts, rels)
+function walk(n, pos, rels)
     states = Point3f0[]
+    vel = fill(Vec3f0(0, 0, 0), length(pos))
     for i = 1:n
-        append!(states, pts)
-        # pts += rels * pts - transpose(transpose(pts) * rels)
-        pts += rels * pts - sum(rels, 2) .* pts
+        append!(states, pos)
+        # pos += rels * pos - transpose(transpose(pos) * rels)
+        # pos += rels * pos - sum(rels, 2) .* pos
+        # d = norm.(100rels * pos - sum(100rels, 2) .* pos)
+        dist = repmat(pos, 1, size(pos, 1))
+        dist = transpose(dist) - dist
+        acc = sum(10rels .* (normalize(dist)), 2)
+
+        vel += acc
+        pos += vel
     end
     states
 end
@@ -75,10 +99,10 @@ Base.@ccallable function julia_main()::Cint # For compilation with PackageCompil
 
     # DEBUG
     # speed_s      = Signal(1)
-    # walkers_s    = Signal(20)
-    # iterations_s = Signal(50)
-    # spread_s     = Signal(40)
-    # attrac_s     = Signal(.001)
+    # walkers_s    = Signal(3)
+    # iterations_s = Signal(4)
+    # spread_s     = Signal(100)
+    # attrac_s     = Signal(.01)
     # variance_s   = Signal(0)
     # cmap_s       = Signal()
     # center_s     = Signal(false)
@@ -148,5 +172,7 @@ Base.@ccallable function julia_main()::Cint # For compilation with PackageCompil
     renderloop(window)
     return 0
 end
+
+julia_main()
 
 end
