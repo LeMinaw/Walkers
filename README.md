@@ -6,9 +6,11 @@ Dynamic systems vizualisation software, written in Julia.
 
 ### On Windows
 
-Standalone Windows builds can be found in [GitHub releases](https://github.com/LeMinaw/walkers/releases).
+Windows builds are planned but currently broken. You'll need [Julia](https://julialang.org/downloads/) to run the software.
 
-*The application takes a few moments to init, please be patient.*
+<!-- Standalone Windows builds can be found in [GitHub releases](https://github.com/LeMinaw/walkers/releases).
+
+The application takes a few moments to init, please be patient. -->
 
 ### In Julia's REPL
 
