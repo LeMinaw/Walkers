@@ -6,7 +6,7 @@ Dynamic systems vizualisation software, written in Julia.
 
 ### On Windows
 
-Standalone windows builds are located in the `builds` directory of this repo.
+Standalone Windows builds can be found in [GitHub releases](https://github.com/LeMinaw/walkers/releases).
 
 *The application takes a few moments to init, please be patient.*
 
