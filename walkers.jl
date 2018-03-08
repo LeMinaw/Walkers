@@ -61,7 +61,7 @@ function walk(n, pos, rels)
     states
 end
 
-Base.@ccallable function julia_main()::Cint # For compilation with PackageCompiler
+Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     # OpenGL interface init
     window = glscreen("Walkers Alpha v1.0.0")
 
@@ -173,6 +173,6 @@ Base.@ccallable function julia_main()::Cint # For compilation with PackageCompil
     return 0
 end
 
-julia_main()
+app() # For tesing purposes, should be removed when compiling
 
 end

@@ -13,7 +13,7 @@
 #endif
 
 // Declare C prototype of a function defined in Julia
-extern int julia_main();
+extern int app();
 
 // main function (windows UTF16 -> UTF8 argument conversion code copied from julia's ui/repl.c)
 int main(int argc, char *argv[]) {
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     julia_init(JL_IMAGE_JULIA_HOME);
 
     // main call
-    retcode = julia_main();
+    retcode = app();
     JL_GC_POP();
     jl_atexit_hook(retcode);
     return retcode;
