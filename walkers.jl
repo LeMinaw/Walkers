@@ -20,7 +20,7 @@ function /(k::Int, pt::Point{})
     k ./ pt
 end
 
-"Replaces all"
+"Replaces all NaN elements of `mat` with zeros."
 function replacenan!(mat::Array{T}) where T
     mat[isnan(x)] = zero(T)
 end
@@ -86,7 +86,7 @@ end
 
 function walk(law::Laws, n::Int, pos::Array, rels::Array)
     states = Point3f0[]
-    vel = fill(Vec3f0(0, 0, 0), length(pos))
+    vel = fill(Vec3f0(0, 0, 0), length(pos)) # Null initial velocity
     for i = 1:n
         append!(states, pos)
         # TODO: Experiment again with this relation:
@@ -94,8 +94,9 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
         # TODO: Add option to normalize, eg:
         # acc = sum(10rels .* (nulldiag(normalize(dist))), 2)
         if law == position
-            # Increases position by a part of the distance
-            pos += rels * pos - sum(rels, 2) .* pos
+            # A specific part of the distance between a walker and the others
+            # will be added to its position.
+            pos += rels * pos - sum(rels .* pos, 2)
         else
             dist = diffs(pos)
             if law == newton
@@ -170,7 +171,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
             center!(viewscreen)
         elseif regen
             seed = abs(rand(Int32)) # Uses the global RNG
-                push!(seed_s, seed)
+            push!(seed_s, seed)
         end
         nothing
     end)
