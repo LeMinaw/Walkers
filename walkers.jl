@@ -89,21 +89,22 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
     vel = fill(Vec3f0(0, 0, 0), length(pos)) # Null initial velocity
     for i = 1:n
         append!(states, pos)
-        # TODO: Experiment again with this relation:
-        # pos += rels * pos - transpose(transpose(pos) * rels)
-        # TODO: Add option to normalize, eg:
-        # acc = sum(10rels .* (nulldiag(normalize(dist))), 2)
         if law == position
             # A specific part of the distance between a walker and the others
             # will be added to its position.
             pos += rels * pos - sum(rels .* pos, 2)
         else
-            dist = diffs(pos)
+            forces = diffs(pos) # Distance between all walkers locations
             if law == newton
-                # Newton's and Coulomb's law is of form k/d²
-                dist = 100^2 * nulldiag(normalize(dist) .* norm.(dist) .^ -1)
+                # Newton's and Coulomb's forces norms are of form k/d².
+                # normalize() returns a direction vector of norm 1, while
+                # norm.().^-2 is the norm of the new force vector.
+                forces = 10^4 * nulldiag(normalize(forces) .* norm.(forces).^-2)
             end
-            vel += sum(.1rels .* dist, 2)
+            # Forces are modulated by walkers relations, then instant velocity
+            # is incremented by the resulting acceleration. Position is then
+            # incremented by instant velocity.
+            vel += sum(.1rels .* forces, 2)
             pos += vel
         end
     end
