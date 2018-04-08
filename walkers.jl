@@ -130,7 +130,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     spread_gui,     spread_s     = labeled_slider(0:.1:100,                     editscreen)
     attrac_gui,     attrac_s     = labeled_slider(-.05:.001:.05,                editscreen)
     variance_gui,   variance_s   = labeled_slider(0:.001:.1,                    editscreen)
-    cmap_gui,       cmap_s       = widget(RGBA{Float32}.(colormap("Reds", 5)),  editscreen)
+    cmap_gui,       cmap_s       = widget(RGBA{Float32}.(colormap("Reds", 3)),  editscreen)
     law_gui,        law_s        = widget(Signal(position),                     editscreen)
     relation_gui,   relation_s   = widget(Signal(onetoone),                     editscreen)
     center_gui,     center_s     = button("⛶",                                  editscreen)
