@@ -12,7 +12,7 @@ import Base./
 
 const version = "1.0.0"
 
-@enum Laws position=0 acceleration=1 newton=2
+@enum Laws position=0 velocity=1 newton=2 cyclical=3
 
 @enum Relations onetoone=0 manytomany=1 electronic=2
 
@@ -93,6 +93,10 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
             # A specific part of the distance between a walker and the others
             # will be added to its position.
             pos += rels * pos - sum(rels .* pos, 2)
+        elseif law == cyclical
+            # Alg that does not uses attraction directly but variances between
+            # attraction values as position modulation.
+            pos += rels * pos - transpose(transpose(pos) * rels)
         else
             forces = diffs(pos) # Distance between all walkers locations
             if law == newton
