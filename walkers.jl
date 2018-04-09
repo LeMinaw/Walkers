@@ -65,9 +65,10 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     window = glscreen("Walkers Alpha v$(version)")
 
     # GUI layout
-    editarea, viewarea = x_partition_abs(window.area, 70mm)
+    editarea, viewarea = x_partition_abs(window.area, 90mm)
     editscreen = Screen(
-        window, area = editarea,
+        window,
+        area = editarea,
         color = RGBA{Float32}(0.98, 0.98, 0.98, 1)
     )
     viewscreen = Screen(window, area=viewarea)
