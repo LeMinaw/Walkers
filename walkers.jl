@@ -28,6 +28,17 @@ function scatter(x::Any, avg=0::Real, width=1::Rand)
     x * 2width - width + avg
 end
 
+"Builds a linear random hue colormap of `steps` elements."
+function huecolmap(steps=2; s=1.0, l=0.5, a=1.0)
+    hues = linspace(rand(0:359), rand(0:359), steps)
+    cmap = Array{RGBA}(steps)
+    for i = 1:steps
+        color = HSLA(hues[i], s, l, a)
+        cmap[i] = convert(RGBA, color)
+    end
+    cmap
+end
+
 "Computes walkers states."
 function walk(law::Laws, n::Int, pos::Array, rels::Array)
     states = Point3f0[]
@@ -73,15 +84,8 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     )
     viewscreen = Screen(window, area=viewarea)
 
-    # Default cmap
-    steps = 3
-    hues = linspace(rand(0:359), rand(0:359), steps)
-    default_cmap = Array{RGBA{Float32}}(steps)
-    for i = 1:steps
-        lum = 1 - (i-1) / 2steps
-        color = convert(RGBA, HSLA(hues[i], 1.0, 0.5, 0.2))
-        default_cmap[i] = RGBA{Float32}(color)
-    end
+    # Default color map
+    default_cmap = RGBA{Float32}.(huecolmap(5, a=.2))
 
     # GUI parameters
     speed_gui,      speed_s      = labeled_slider(0:.1:10,        editscreen)
