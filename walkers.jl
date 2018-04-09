@@ -73,18 +73,28 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     )
     viewscreen = Screen(window, area=viewarea)
 
+    # Default cmap
+    steps = 3
+    hues = linspace(rand(0:359), rand(0:359), steps)
+    default_cmap = Array{RGBA{Float32}}(steps)
+    for i = 1:steps
+        lum = 1 - (i-1) / 2steps
+        color = convert(RGBA, HSLA(hues[i], 1.0, 0.5, 0.2))
+        default_cmap[i] = RGBA{Float32}(color)
+    end
+
     # GUI parameters
-    speed_gui,      speed_s      = labeled_slider(0:.1:10,                      editscreen)
-    walkers_gui,    walkers_s    = labeled_slider(2:1:40,                       editscreen)
-    iterations_gui, iterations_s = labeled_slider(2:1:1000,                     editscreen)
-    spread_gui,     spread_s     = labeled_slider(0:.1:100,                     editscreen)
-    attrac_gui,     attrac_s     = labeled_slider(-.05:.001:.05,                editscreen)
-    variance_gui,   variance_s   = labeled_slider(0:.001:.1,                    editscreen)
-    cmap_gui,       cmap_s       = widget(RGBA{Float32}.(colormap("Reds", 3)),  editscreen)
-    law_gui,        law_s        = widget(Signal(position),                     editscreen)
-    relation_gui,   relation_s   = widget(Signal(onetoone),                     editscreen)
-    center_gui,     center_s     = button("⛶",                                  editscreen)
-    regen_gui,      regen_s      = button("↻",                                  editscreen)
+    speed_gui,      speed_s      = labeled_slider(0:.1:10,        editscreen)
+    walkers_gui,    walkers_s    = labeled_slider(2:1:40,         editscreen)
+    iterations_gui, iterations_s = labeled_slider(2:1:1000,       editscreen)
+    spread_gui,     spread_s     = labeled_slider(0:.1:100,       editscreen)
+    attrac_gui,     attrac_s     = labeled_slider(-.05:.0001:.05, editscreen)
+    variance_gui,   variance_s   = labeled_slider(0:.0001:.1,     editscreen)
+    cmap_gui,       cmap_s       = widget(default_cmap,           editscreen)
+    law_gui,        law_s        = widget(Signal(position),       editscreen)
+    relation_gui,   relation_s   = widget(Signal(onetoone),       editscreen)
+    center_gui,     center_s     = button("⛶",                    editscreen)
+    regen_gui,      regen_s      = button("↻",                    editscreen)
     params = Pair[
         "Rotation speed" => speed_gui,
         "Walkers number" => walkers_gui,
@@ -165,14 +175,16 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
 
     # Plotting
     lines = visualize(
-        lines_s, :lines,
+        lines_s,
+        :lines,
         intensity = [0f0, 0f0],
         color_map = [RGBA{Float32}(0, 0, 0, 0.8), RGBA{Float32}(0, 0, 0, 0.8)],
         color_norm = Vec2f0(0, 1),
         model = rot_s,
     )
     rings = visualize(
-        rings_s, :lines,
+        rings_s,
+        :lines,
         intensity = collect(linspace(0f0, 1f0, 1024)),
         color_map = cmap_s,
         color_norm = cnorm_s,
