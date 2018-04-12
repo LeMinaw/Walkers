@@ -177,7 +177,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
         else
             rel = rand(rng, n, n)
         end
-        scatter.(rel, avg, var)
+        nulldiag(scatter.(rel, avg, var))
     end
 
     states_s = map(law_s, iterations_s, points_s, relations_s) do law, iters, pts, rels
