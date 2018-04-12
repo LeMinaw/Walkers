@@ -85,31 +85,37 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
         area = editarea,
         color = RGBA{Float32}(0.98, 0.98, 0.98, 1)
     )
-    viewscreen = Screen(window, area=viewarea)
+    viewscreen = Screen(
+        window,
+        area = viewarea,
+    )
 
-    # Default color map
+    # Default colors
     default_cmap = RGBA{Float32}.(huecolmap(5, a=.2))
+    default_path_color = RGBA{Float32}.(0, 0, 0, .8)
 
     # GUI parameters
-    speed_gui,      speed_s      = labeled_slider(0:.1:10,        editscreen)
-    walkers_gui,    walkers_s    = labeled_slider(2:1:40,         editscreen)
-    iterations_gui, iterations_s = labeled_slider(2:1:1000,       editscreen)
-    spread_gui,     spread_s     = labeled_slider(0:.1:100,       editscreen)
-    attrac_gui,     attrac_s     = labeled_slider(-.05:.0001:.05, editscreen)
-    variance_gui,   variance_s   = labeled_slider(0:.0001:.1,     editscreen)
-    cmap_gui,       cmap_s       = widget(default_cmap,           editscreen)
-    law_gui,        law_s        = widget(Signal(position),       editscreen)
-    relation_gui,   relation_s   = widget(Signal(onetoone),       editscreen)
-    center_gui,     center_s     = button("⛶",                    editscreen)
-    regen_gui,      regen_s      = button("↻",                    editscreen)
+    speed_gui,      speed_s      = labeled_slider(0:.1:10,            editscreen)
+    walkers_gui,    walkers_s    = labeled_slider(2:1:40,             editscreen)
+    iterations_gui, iterations_s = labeled_slider(2:1:1000,           editscreen)
+  # spread_gui,     spread_s     = labeled_slider(0:.1:100,           editscreen)
+    attrac_gui,     attrac_s     = labeled_slider(-.05:.0001:.05,     editscreen)
+    variance_gui,   variance_s   = labeled_slider(0:.0001:.1,         editscreen)
+    cmap_gui,       cmap_s       = widget(default_cmap,               editscreen)
+    path_color_gui, path_color_s = widget(Signal(default_path_color), editscreen)
+    law_gui,        law_s        = widget(Signal(position),           editscreen)
+    relation_gui,   relation_s   = widget(Signal(onetoone),           editscreen)
+    center_gui,     center_s     = button("⛶",                        editscreen)
+    regen_gui,      regen_s      = button("↻",                        editscreen)
     params = Pair[
         "Rotation speed" => speed_gui,
         "Walkers number" => walkers_gui,
         "Iterations"     => iterations_gui,
-        "Walkers spread" => spread_gui,
+      # "Walkers spread" => spread_gui,
         "Attraction"     => attrac_gui,
         "Variance"       => variance_gui,
         "Color map"      => cmap_gui,
+        "Paths color"    => path_color_gui,
         "Relation model" => relation_gui,
         "Dynamics law"   => law_gui,
         "Center"         => center_gui,
@@ -122,7 +128,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     # speed_s      = Signal(1)
     # walkers_s    = Signal(3)
     # iterations_s = Signal(4)
-    # spread_s     = Signal(100)
+      spread_s     = Signal(100)
     # attrac_s     = Signal(.01)
     # variance_s   = Signal(0)
     # cmap_s       = Signal()
@@ -211,7 +217,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
         lines_s,
         :lines,
         intensity = [0f0, 0f0],
-        color_map = [RGBA{Float32}(0, 0, 0, 0.8), RGBA{Float32}(0, 0, 0, 0.8)],
+        color_map = map(x -> [x, x], path_color_s),
         color_norm = Vec2f0(0, 1),
         model = rot_s,
     )
