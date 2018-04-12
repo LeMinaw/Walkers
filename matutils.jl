@@ -19,6 +19,15 @@ function shufflecols(mat::Array{T, 2}) where T
     mat[:, randperm(size(mat, 2))]
 end
 
+"Randomly sets zeros in place."
+function randzero!(mat::Array{T}, prob::Real=.5) where T
+    for i = eachindex(mat)
+        if rand() < prob
+            mat[i] = zero(T)
+        end
+    end
+end
+
 """
 Returns an copy of `mat` where columns are offset to the left.
 

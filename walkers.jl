@@ -17,7 +17,7 @@ const version = "1.1.0"
 
 @enum Laws position=0 velocity=1 newtonlinear=2 newton=3 cyclical=4
 
-@enum Relations onetoone=0 manytomany=1 electronic=2
+@enum Relations onetoone=0 sparse=1 manytomany=2 electronic=3
 
 "Defines broadcast on real by point division."
 function /(x::Real, pt::Point{})
@@ -165,23 +165,34 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
         rotationmatrix_z(Float32(t * s/360)) # -> 4x4 Float32 rotation matrix
     end
 
+    # Spread points in space at initialization
     points_s = map(walkers_s, spread_s, seed_s) do n, spread, seed
         srand(rng, seed) # Inits local RNG
         scatter.(rand(rng, Point3f0, n), 0, spread)
     end
+
+    # Define relation matrix
     relations_s = map(walkers_s, relation_s, attrac_s, variance_s, seed_s) do n, model, avg, var, seed
         srand(rng, seed) # Inits local RNG
+        # One walker is in relation with another
         if model == onetoone
             rel = offsetcols(eye(n))
+        # Relation matrix as if each walker behaves as a +/- charged particule
         elseif model == electronic
             loads = repmat(rand(rng, n), 1, n)
             rel = -transpose(loads) .* loads
+        # Each walker is in relation with all others
         else
             rel = rand(rng, n, n)
+            # Sparse model is ManyToMany with 75% of the relations set to 0
+            if model == sparse
+                randzero!(rel, .75)
+            end
         end
         nulldiag(scatter.(rel, avg, var))
     end
 
+    # Mapping plotting signals
     states_s = map(law_s, iterations_s, points_s, relations_s) do law, iters, pts, rels
         walk(map(value, (law, iters, pts, rels))...)
     end
