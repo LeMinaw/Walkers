@@ -1,7 +1,8 @@
 module Walkers
 
-using GLAbstraction, Colors, GeometryTypes, GLVisualize, Reactive, GLWindow
+using GLAbstraction, Colors, GeometryTypes, GLVisualize, Reactive, GLWindow, GLFW
 import GLVisualize: mm, widget, button, slider, labeled_slider
+import GLFW: KEY_S
 import Base./
 # import Colors: RGBA, colormap
 # import GeometryTypes: Vec2f0, Point3f0
@@ -130,7 +131,7 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
     seed_s = Signal(abs(rand(Int32)))
     rng = MersenneTwister(0)
 
-    # Buttons actions
+    # Tray button actions
     preserve(map(center_s, regen_s) do center, regen # preserve() avoids GC
         if center
             center!(viewscreen)
@@ -141,7 +142,22 @@ Base.@ccallable function app()::Cint # For compilation with PackageCompiler
         nothing
     end)
 
-    # Computation and signals mappings
+    # Save stuff
+    key_pressed = false
+    preserve(map(window.inputs[:keyboard_buttons]) do ksam # preserve() avoids GC
+       key, scancode, action, mods = ksam
+       if key == GLFW.KEY_S && !key_pressed
+           name = rand(0000:9999)
+           screenshot(viewscreen, path="$name.png",       channel=:color)
+           screenshot(viewscreen, path="$name-depth.png", channel=:depth)
+           key_pressed = true
+       else
+           key_pressed = false
+       end
+       nothing
+    end)
+
+    # Time and rotation signal mappings
     time_s = loop(linspace(0f0, Float32(typemax(Int32)), typemax(Int32)))
     rot_s = map(time_s, speed_s) do t, s
         rotationmatrix_z(Float32(t * s/360)) # -> 4x4 Float32 rotation matrix
