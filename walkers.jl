@@ -15,7 +15,7 @@ include("matutils.jl")
 
 const version = "1.1.0"
 
-@enum Laws position=0 velocity=1 newton=2 cyclical=3
+@enum Laws position=0 velocity=1 newtonlinear=2 newton=3 cyclical=4
 
 @enum Relations onetoone=0 manytomany=1 electronic=2
 
@@ -56,11 +56,13 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
             pos += rels * pos - transpose(transpose(pos) * rels)
         else
             forces = diffs(pos) # Distance between all walkers locations
-            if law == newton
+            if law == newton || law == newtonlinear
                 # Newton's and Coulomb's forces norms are of form k/d².
-                # normalize() returns a direction vector of norm 1, while
-                # norm.().^-2 is the norm of the new force vector.
-                forces = 10^4 * nulldiag(normalize(forces) .* norm.(forces).^-2)
+                # newtonlinear is variation of form k/d
+                # normalize(f) returns a direction vector of norm 1, while
+                # norm.(f).^pow is the norm of the new force vector.
+                pow = law == newton ? -2 : -1
+                forces = 10^4 * nulldiag(normalize(forces) .* norm.(forces) .^ pow)
             end
             # Forces are modulated by walkers relations, then instant velocity
             # is incremented by the resulting acceleration. Position is then
