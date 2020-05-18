@@ -1,3 +1,5 @@
+using Random
+
 # "Replaces all NaN elements of `mat` with zeros."
 # function replacenan!(mat::Array{T}) where T
 #     mat[isnan(x)] = zero(T)
@@ -62,6 +64,6 @@ a-c b-c c-c
 ```
 """
 function diffs(mat::Array)
-    dupl = repmat(mat, 1, size(mat, 1))
+    dupl = repeat(mat, 1, size(mat, 1))
     transpose(dupl) - dupl
 end
