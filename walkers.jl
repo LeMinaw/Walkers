@@ -74,8 +74,6 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
 end
 
 function app()
-    scene = Scene(show_axis=false)
-
     count_slider, count     = textslider(2:40,                       "Walkers count",       start=5)
     spread_slider, spread   = textslider(LinRange(0f0, 100f0, 101),  "Walkers spread",      start=50f0)
     rel_avg_slider, rel_avg = textslider(LinRange(-.5f0, .5f0, 101), "Average attraction",  start=0f0)
@@ -233,8 +231,13 @@ function app()
         reshape(permutedims(paths), length(paths))
     end
 
+    scene = Scene(show_axis=false)
+
     lines!(scene, rings, color=rings_color, transparency=true, linewidth=2)
     lines!(scene, paths, color=paths_color, transparency=true, linewidth=3)
+
+    controls = cameracontrols(scene)
+    controls.rotationspeed[]= .05
     
     gui = hbox(
         iters_slider,
