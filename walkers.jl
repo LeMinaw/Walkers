@@ -4,6 +4,7 @@ using LinearAlgebra
 using Random: seed!
 using Colors
 using GLMakie
+using MakieLayout
 using AbstractPlotting
 # using AbstractPlotting: textslider, colorswatch
 import Base./
@@ -74,12 +75,34 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
 end
 
 function app()
+
+    set_theme!(
+        fontsize = 14,
+        colgap = 0,
+        rowgap = 0
+    )
+
+    app_scene = Scene(camera=campixel!)
+    
+    app_layout = GridLayout(
+        app_scene,
+        2, 2,
+        colsizes = [Fixed(400), Auto()],
+        rowsizes = [Auto(), Auto()],
+    )
+
+    view_scene = LScene(app_scene, camera=cam3d!, raw=false)
+    view_scene.scene[:show_axis] = false
+
+    count_ls  = labelslider!(app_scene, "Walkers count",  2:40;                      sliderkw=Dict(:startvalue=>5))
+    spread_ls = labelslider!(app_scene, "Walkers spread", LinRange(0f0, 100f0, 101); sliderkw=Dict(:startvalue=>50f0))
+
     count_slider, count     = textslider(2:40,                       "Walkers count",       start=5)
     spread_slider, spread   = textslider(LinRange(0f0, 100f0, 101),  "Walkers spread",      start=50f0)
     rel_avg_slider, rel_avg = textslider(LinRange(-.5f0, .5f0, 101), "Average attraction",  start=0f0)
     rel_var_slider, rel_var = textslider(LinRange(0f0, 1f0, 101),    "Attraction variance", start=0f0)
     iters_slider, iters     = textslider(2:1000,                     "Iterations",          start=10)
-    
+
     #=
         # Default colors
         default_cmap = RGBA{Float32}.(huecolmap(5, a=.2))
@@ -102,8 +125,6 @@ function app()
             "Center"         => center_gui,
             "Regenerate"     => regen_gui
         ]
-        menu = visualize(params)
-        _view(menu, editscreen, camera=:fixed_pixel)
 
         # DEBUG
         # speed_s      = Signal(1)
@@ -165,10 +186,6 @@ function app()
             color_norm = cnorm_s,
             model = rot_s,
         )
-        _view(lines, viewscreen, camera=:perspective)
-        _view(rings, viewscreen, camera=:perspective)
-
-        renderloop(window)
     =#
     
     seed = 13121312
@@ -230,24 +247,34 @@ function app()
         paths = hcat($states, fill(NaNPoint3f0, size($states, 1)))
         reshape(permutedims(paths), length(paths))
     end
+    
+    app_layout[1, 1] = vbox!(
+        count_ls.layout,
+        spread_ls.layout,
+        tellheight = false,
+        alignmode = Outside(8)
+    )
+    app_layout[1, 2] = view_scene
+    app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
+    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
+    app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
 
-    scene = Scene(show_axis=false)
 
-    lines!(scene, rings, color=rings_color, transparency=true, linewidth=2)
-    lines!(scene, paths, color=paths_color, transparency=true, linewidth=3)
+    lines!(view_scene, rings, color=rings_color, transparency=true, linewidth=2)
+    lines!(view_scene, paths, color=paths_color, transparency=true, linewidth=3)
 
-    controls = cameracontrols(scene)
+    controls = cameracontrols(view_scene.scene)
     controls.rotationspeed[]= .05
     
-    gui = hbox(
-        iters_slider,
-        rel_var_slider,
-        rel_avg_slider,
-        spread_slider,
-        count_slider
-    )
-    main = vbox(gui, scene)
-    display(main)
+    # gui = hbox(
+    #     iters_slider,
+    #     rel_var_slider,
+    #     rel_avg_slider,
+    #     spread_slider,
+    #     count_slider
+    # )
+    # main = vbox(gui, scene)
+    display(app_scene)
 end
 
 app() # For tesing purposes, should be removed when compiling
