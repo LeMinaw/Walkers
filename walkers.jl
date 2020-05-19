@@ -12,7 +12,7 @@ include("matutils.jl")
 
 const version = "2.0.0"
 
-const nan_point = Point3f0(NaN32, NaN32, NaN32)
+const NaNPoint3f0 = Point3f0(NaN32, NaN32, NaN32)
 
 @enum Laws position=0 velocity=1 newtonlinear=2 newton=3 cyclical=4
 
@@ -76,34 +76,19 @@ end
 function app()
     scene = Scene(show_axis=false)
 
-    rel_avg_slider, rel_avg = textslider(LinRange(-1f0, 1f0, 100), "Average attraction", start=0f0)
-    rel_var_slider, rel_var = textslider(LinRange(0f0, 1f0, 100), "Attraction variance", start=0f0)
-
+    count_slider, count     = textslider(2:40,                       "Walkers count",       start=5)
+    spread_slider, spread   = textslider(LinRange(0f0, 100f0, 101),  "Walkers spread",      start=50f0)
+    rel_avg_slider, rel_avg = textslider(LinRange(-.5f0, .5f0, 101), "Average attraction",  start=0f0)
+    rel_var_slider, rel_var = textslider(LinRange(0f0, 1f0, 101),    "Attraction variance", start=0f0)
+    iters_slider, iters     = textslider(2:1000,                     "Iterations",          start=10)
+    
     #=
-        
-        # GUI layout
-        editarea, viewarea = x_partition_abs(window.area, 90mm)
-        editscreen = Screen(
-            window,
-            area = editarea,
-            color = RGBA{Float32}(0.98, 0.98, 0.98, 1)
-        )
-        viewscreen = Screen(
-            window,
-            area = viewarea,
-        )
-
         # Default colors
         default_cmap = RGBA{Float32}.(huecolmap(5, a=.2))
         default_path_color = RGBA{Float32}.(0, 0, 0, .8)
 
         # GUI parameters
         speed_gui,      speed_s      = textslider(0:.1:10,            editscreen)
-        walkers_gui,    walkers_s    = textslider(2:1:40,             editscreen)
-        iterations_gui, iterations_s = textslider(2:1:1000,           editscreen)
-        # spread_gui,     spread_s     = textslider(0:.1:100,           editscreen)
-        attrac_gui,     attrac_s     = textslider(-.05:.0001:.05,     editscreen)
-        variance_gui,   variance_s   = textslider(0:.0001:.1,         editscreen)
         # cmap_gui,       cmap_s       = widget(default_cmap,               editscreen)
         # path_color_gui, path_color_s = widget(Signal(default_path_color), editscreen)
         # law_gui,        law_s        = widget(Signal(position),           editscreen)
@@ -112,11 +97,6 @@ function app()
         regen_gui,      regen_s      = button("↻",                        editscreen)
         params = Pair[
             "Rotation speed" => speed_gui,
-            "Walkers number" => walkers_gui,
-            "Iterations"     => iterations_gui,
-        # "Walkers spread" => spread_gui,
-            "Attraction"     => attrac_gui,
-            "Variance"       => variance_gui,
             "Color map"      => cmap_gui,
             "Paths color"    => path_color_gui,
             "Relation rel_model" => relation_gui,
@@ -129,11 +109,6 @@ function app()
 
         # DEBUG
         # speed_s      = Signal(1)
-        # walkers_s    = Signal(3)
-        # iterations_s = Signal(4)
-        spread_s     = Signal(100)
-        # attrac_s     = Signal(.01)
-        # variance_s   = Signal(0)
         # cmap_s       = Signal()
         # center_s     = Signal(false)
         # regen_s      = Signal(false)
@@ -196,12 +171,8 @@ function app()
         _view(rings, viewscreen, camera=:perspective)
 
         renderloop(window)
-
     =#
     
-    n = 3
-    iters = 5
-    spread = 1
     seed = 13121312
     law = position
     rel_model = onetoone
@@ -211,57 +182,66 @@ function app()
     # RNG
     rng = MersenneTwister(0)
 
+    # Init points
+    points = @lift begin
+        seed!(rng, seed)
+        scatter.(rand(rng, Point3f0, $count), 0, $spread)
+    end
+
     # Relation matrix
     relations = @lift begin
         seed!(rng, seed)
         # One walker is in relation with another
         if rel_model == onetoone
-            rel = offsetcols(Matrix{Float32}(I, n, n)) .* (2 * rand(rng, n, n) .- 1)
+            rel = offsetcols(Matrix{Float32}(I, $count, $count)) .* (2 * rand(rng, $count, $count) .- 1)
         # Relation matrix as if each walker behaves as a +/- charged particule
         elseif rel_model == electronic
-            loads = repeat(rand(rng, n), 1, n)
+            loads = repeat(rand(rng, $count), 1, $count)
             rel = -transpose(loads) .* loads
         # Each walker is in relation with all others
         else
-            rel = rand(rng, n, n)
+            rel = rand(rng, $count, $count)
             # Sparse rel_model is ManyToMany with 75% of the relations set to 0
             if rel_model == sparse
                 randzero!(rel, .75)
             end
         end
         nulldiag(scatter.(rel, $rel_avg, $rel_var))
-    end    
-    println("Relations:")
-    display(to_value(relations))
-
-    # Init points
-    seed!(rng, seed)
-    points = scatter.(rand(rng, Point3f0, n), 0, spread)
+    end
 
     # System states
+    last_states::Union{Array{Point3f0, 2}, Nothing} = nothing
     states = @lift begin
-        states = walk(law, iters, points, $relations)
-        reshape(states, n, iters)
+        if length($points) == size($relations, 1)
+            states = walk(law, $iters, $points, $relations)
+            states = reshape(states, $count, $iters)
+            last_states = states
+            return states
+        else
+            return last_states
+        end
     end
 
     # Geometry
     rings = @lift begin
         rings = vcat($states, $states[1:1, :])
-        rings = vcat(rings, fill(nan_point, (1, iters)))
+        rings = vcat(rings, fill(NaNPoint3f0, (1, size(rings, 2))))
         reshape(rings, length(rings))
     end
     paths = @lift begin
-        paths = hcat($states, fill(nan_point, n))
-        paths = reshape(permutedims(paths), length(paths))
-        paths
+        paths = hcat($states, fill(NaNPoint3f0, size($states, 1)))
+        reshape(permutedims(paths), length(paths))
     end
 
     lines!(scene, rings, color=rings_color, transparency=true, linewidth=2)
     lines!(scene, paths, color=paths_color, transparency=true, linewidth=3)
     
     gui = hbox(
+        iters_slider,
+        rel_var_slider,
         rel_avg_slider,
-        rel_var_slider
+        spread_slider,
+        count_slider
     )
     main = vbox(gui, scene)
     display(main)
