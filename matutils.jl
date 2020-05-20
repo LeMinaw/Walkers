@@ -65,5 +65,5 @@ a-c b-c c-c
 """
 function diffs(mat::Array)
     dupl = repeat(mat, 1, size(mat, 1))
-    transpose(dupl) - dupl
+    permutedims(dupl) - dupl
 end
