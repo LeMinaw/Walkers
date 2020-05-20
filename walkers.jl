@@ -108,11 +108,17 @@ function app()
     rel_var_ls = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
     iters_ls = labelslider!(app_scene,   "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
 
-    #=
-        # Default colors
-        default_cmap = RGBA{Float32}.(huecolmap(5, a=.2))
-        default_path_color = RGBA{Float32}.(0, 0, 0, .8)
+    app_layout[1, 1] = vbox!(
+        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls)...,
+        tellheight = false,
+        alignmode = Outside(8)
+    )
+    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
+    app_layout[1, 2] = view_scene
+    app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
+    app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
 
+    #=
         # GUI parameters
         speed_gui,      speed_s      = textslider(0:.1:10,            editscreen)
         # cmap_gui,       cmap_s       = widget(default_cmap,               editscreen)
@@ -168,36 +174,17 @@ function app()
         rot_s = map(time_s, speed_s) do t, s
             rotationmatrix_z(Float32(t * s/360)) # -> 4x4 Float32 rotation matrix
         end
-
-        # Mapping plotting signals
-        cnorm_s = map(iterations_s) do iters
-            Vec2f0(1, iters/1024)
-        end
-
-        # Plotting
-        lines = visualize(
-            lines_s,
-            :lines,
-            intensity = [0f0, 0f0],
-            color_map = map(x -> [x, x], path_color_s),
-            color_norm = Vec2f0(0, 1),
-            model = rot_s,
-        )
-        rings = visualize(
-            rings_s,
-            :lines,
-            intensity = collect(linspace(0f0, 1f0, 1024)),
-            color_map = cmap_s,
-            color_norm = cnorm_s,
-            model = rot_s,
-        )
     =#
-    
+
     seed = 13121312
     law = position
     rel_model = onetoone
-    rings_color = RGBA(1, 0, 0, .7)
-    paths_color = RGBA(.2, .2, .2, .7)
+    rings_colors_stops::Array{RGBAf0, 1} = [
+        RGBA(.27, .01, .33, .7),
+        RGBA(.13, .56, .55, .6),
+        RGBA(.99, .91, .14, .4)
+    ]
+    paths_color = RGBA(.1, .1, .1, .8)
 
     # RNG
     rng = MersenneTwister(0)
@@ -252,31 +239,17 @@ function app()
         paths = hcat($states, fill(NaNPoint3f0, size($states, 1)))
         reshape(permutedims(paths), length(paths))
     end
-    
-    app_layout[1, 1] = vbox!(
-        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls)...,
-        tellheight = false,
-        alignmode = Outside(8)
-    )
-    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
-    app_layout[1, 2] = view_scene
-    app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
-    app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
 
+    # Colors
+    rings_color = @lift to_colormap(rings_colors_stops, length($rings))
+
+    # Plotting
     lines!(view_scene, rings, color=rings_color, transparency=true, linewidth=2)
     lines!(view_scene, paths, color=paths_color, transparency=true, linewidth=3)
 
     controls = cameracontrols(view_scene.scene)
     controls.rotationspeed[]= .02
     
-    # gui = hbox(
-    #     iters_slider,
-    #     rel_var_slider,
-    #     rel_avg_slider,
-    #     spread_slider,
-    #     count_slider
-    # )
-    # main = vbox(gui, scene)
     display(app_scene)
 end
 
