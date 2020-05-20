@@ -24,6 +24,11 @@ function ls_values(sliders...)
     [s.slider.value for s in sliders]
 end
 
+"Return the layouts of multiple labeled sliders."
+function ls_layouts(sliders...)
+    [s.layout for s in sliders]
+end
+
 "Defines broadcast on real by point division."
 function /(x::Real, pt::Point{})
     x ./ pt
@@ -80,7 +85,6 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
 end
 
 function app()
-
     set_theme!(
         fontsize = 13.5,
         colgap = 0,
@@ -103,8 +107,6 @@ function app()
     rel_avg_ls = labelslider!(app_scene, "Average attraction",  LinRange(-.1f0, .1f0, 101); sliderkw=Dict(:startvalue=>0f0))
     rel_var_ls = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
     iters_ls = labelslider!(app_scene,   "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
-
-    println(typeof(count_ls))
 
     #=
         # Default colors
@@ -252,11 +254,7 @@ function app()
     end
     
     app_layout[1, 1] = vbox!(
-        count_ls.layout,
-        spread_ls.layout,
-        rel_avg_ls.layout,
-        rel_var_ls.layout,
-        iters_ls.layout,
+        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls)...,
         tellheight = false,
         alignmode = Outside(8)
     )
