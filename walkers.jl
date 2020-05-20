@@ -19,6 +19,11 @@ const NaNPoint3f0 = Point3f0(NaN32, NaN32, NaN32)
 
 @enum Relations onetoone=0 sparse=1 manytomany=2 electronic=3
 
+"Return the values of multiple labeled sliders."
+function ls_values(sliders...)
+    [s.slider.value for s in sliders]
+end
+
 "Defines broadcast on real by point division."
 function /(x::Real, pt::Point{})
     x ./ pt
@@ -77,7 +82,7 @@ end
 function app()
 
     set_theme!(
-        fontsize = 14,
+        fontsize = 13.5,
         colgap = 0,
         rowgap = 0
     )
@@ -87,21 +92,19 @@ function app()
     app_layout = GridLayout(
         app_scene,
         2, 2,
-        colsizes = [Fixed(400), Auto()],
-        rowsizes = [Auto(), Auto()],
+        colsizes = [Fixed(400), Auto()]
     )
 
     view_scene = LScene(app_scene, camera=cam3d!, raw=false)
     view_scene.scene[:show_axis] = false
 
-    count_ls  = labelslider!(app_scene, "Walkers count",  2:40;                      sliderkw=Dict(:startvalue=>5))
-    spread_ls = labelslider!(app_scene, "Walkers spread", LinRange(0f0, 100f0, 101); sliderkw=Dict(:startvalue=>50f0))
+    count_ls  = labelslider!(app_scene,  "Walkers count",       2:40;                       sliderkw=Dict(:startvalue=>5))
+    spread_ls = labelslider!(app_scene,  "Walkers spread",      LinRange(0f0, 100f0, 101);  sliderkw=Dict(:startvalue=>50f0))
+    rel_avg_ls = labelslider!(app_scene, "Average attraction",  LinRange(-.1f0, .1f0, 101); sliderkw=Dict(:startvalue=>0f0))
+    rel_var_ls = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
+    iters_ls = labelslider!(app_scene,   "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
 
-    count_slider, count     = textslider(2:40,                       "Walkers count",       start=5)
-    spread_slider, spread   = textslider(LinRange(0f0, 100f0, 101),  "Walkers spread",      start=50f0)
-    rel_avg_slider, rel_avg = textslider(LinRange(-.5f0, .5f0, 101), "Average attraction",  start=0f0)
-    rel_var_slider, rel_var = textslider(LinRange(0f0, 1f0, 101),    "Attraction variance", start=0f0)
-    iters_slider, iters     = textslider(2:1000,                     "Iterations",          start=10)
+    println(typeof(count_ls))
 
     #=
         # Default colors
@@ -198,38 +201,38 @@ function app()
     rng = MersenneTwister(0)
 
     # Init points
-    points = @lift begin
+    points = lift(ls_values(count_ls, spread_ls)...) do count, spread
         seed!(rng, seed)
-        scatter.(rand(rng, Point3f0, $count), 0, $spread)
+        scatter.(rand(rng, Point3f0, count), 0, spread)
     end
 
     # Relation matrix
-    relations = @lift begin
+    relations = lift(ls_values(count_ls, rel_avg_ls, rel_var_ls)...) do n, avg, var
         seed!(rng, seed)
         # One walker is in relation with another
         if rel_model == onetoone
-            rel = offsetcols(Matrix{Float32}(I, $count, $count)) .* (2 * rand(rng, $count, $count) .- 1)
+            rel = offsetcols(Matrix{Float32}(I, n, n)) .* (2 * rand(rng, n, n) .- 1)
         # Relation matrix as if each walker behaves as a +/- charged particule
         elseif rel_model == electronic
-            loads = repeat(rand(rng, $count), 1, $count)
+            loads = repeat(rand(rng, n), 1, n)
             rel = -transpose(loads) .* loads
         # Each walker is in relation with all others
         else
-            rel = rand(rng, $count, $count)
+            rel = rand(rng, n, n)
             # Sparse rel_model is ManyToMany with 75% of the relations set to 0
             if rel_model == sparse
                 randzero!(rel, .75)
             end
         end
-        nulldiag(scatter.(rel, $rel_avg, $rel_var))
+        nulldiag(scatter.(rel, avg, var))
     end
 
     # System states
     last_states::Union{Array{Point3f0, 2}, Nothing} = nothing
-    states = @lift begin
-        if length($points) == size($relations, 1)
-            states = walk(law, $iters, $points, $relations)
-            states = reshape(states, $count, $iters)
+    states = lift(ls_values(count_ls, iters_ls)..., points, relations) do n, iters, points, relations
+        if length(points) == size(relations, 1)
+            states = walk(law, iters, points, relations)
+            states = reshape(states, n, iters)
             last_states = states
             return states
         else
@@ -251,20 +254,22 @@ function app()
     app_layout[1, 1] = vbox!(
         count_ls.layout,
         spread_ls.layout,
+        rel_avg_ls.layout,
+        rel_var_ls.layout,
+        iters_ls.layout,
         tellheight = false,
         alignmode = Outside(8)
     )
+    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
     app_layout[1, 2] = view_scene
     app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
-    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
     app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
-
 
     lines!(view_scene, rings, color=rings_color, transparency=true, linewidth=2)
     lines!(view_scene, paths, color=paths_color, transparency=true, linewidth=3)
 
     controls = cameracontrols(view_scene.scene)
-    controls.rotationspeed[]= .05
+    controls.rotationspeed[]= .02
     
     # gui = hbox(
     #     iters_slider,
