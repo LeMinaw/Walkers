@@ -77,7 +77,7 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
             # Forces are modulated by walkers relations, then instant velocity
             # is incremented by the resulting acceleration. Position is then
             # incremented by instant velocity.
-            vel += sum(.1rels .* forces, 2)
+            vel += sum(.1rels .* forces, dims=2)
             pos += vel
         end
     end
@@ -102,14 +102,15 @@ function app()
     view_scene = LScene(app_scene, camera=cam3d!, raw=false)
     view_scene.scene[:show_axis] = false
 
-    count_ls  = labelslider!(app_scene,  "Walkers count",       2:40;                       sliderkw=Dict(:startvalue=>5))
-    spread_ls = labelslider!(app_scene,  "Walkers spread",      LinRange(0f0, 100f0, 101);  sliderkw=Dict(:startvalue=>50f0))
-    rel_avg_ls = labelslider!(app_scene, "Average attraction",  LinRange(-.1f0, .1f0, 101); sliderkw=Dict(:startvalue=>0f0))
-    rel_var_ls = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
-    iters_ls = labelslider!(app_scene,   "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
+    count_ls    = labelslider!(app_scene, "Walkers count",       2:40;                       sliderkw=Dict(:startvalue=>5))
+    spread_ls   = labelslider!(app_scene, "Walkers spread",      LinRange(0f0, 100f0, 101);  sliderkw=Dict(:startvalue=>50f0))
+    rel_avg_ls  = labelslider!(app_scene, "Average attraction",  LinRange(-.1f0, .1f0, 101); sliderkw=Dict(:startvalue=>0f0))
+    rel_var_ls  = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
+    iters_ls    = labelslider!(app_scene, "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
+    rotspeed_ls = labelslider!(app_scene, "Rotation speed",      LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>.2f0))
 
     app_layout[1, 1] = vbox!(
-        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls)...,
+        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)...,
         tellheight = false,
         alignmode = Outside(8)
     )
@@ -177,7 +178,7 @@ function app()
     =#
 
     seed = 13121312
-    law = position
+    law = velocity
     rel_model = onetoone
     rings_colors_stops::Array{RGBAf0, 1} = [
         RGBA(.27, .01, .33, .7),
@@ -230,27 +231,38 @@ function app()
     end
 
     # Geometry
-    rings = @lift begin
+    rings_vertex = @lift begin
         rings = vcat($states, $states[1:1, :])
         rings = vcat(rings, fill(NaNPoint3f0, (1, size(rings, 2))))
         reshape(rings, length(rings))
     end
-    paths = @lift begin
+    paths_vertex = @lift begin
         paths = hcat($states, fill(NaNPoint3f0, size($states, 1)))
         reshape(permutedims(paths), length(paths))
     end
 
     # Colors
-    rings_color = @lift to_colormap(rings_colors_stops, length($rings))
+    rings_color = @lift to_colormap(rings_colors_stops, length($rings_vertex))
 
     # Plotting
-    lines!(view_scene, rings, color=rings_color, transparency=true, linewidth=2)
-    lines!(view_scene, paths, color=paths_color, transparency=true, linewidth=3)
+    rings = lines!(view_scene, rings_vertex, color=rings_color, transparency=true, linewidth=2)
+    paths = lines!(view_scene, paths_vertex, color=paths_color, transparency=true, linewidth=3)
 
+    # Controls
     controls = cameracontrols(view_scene.scene)
     controls.rotationspeed[]= .02
-    
+
+    # Run app
     display(app_scene)
+
+    # Autorotate
+    angle = lift(rotspeed_ls.slider.value) do speed
+        speed / 5f1
+    end
+    while isopen(view_scene.scene)
+        rotate_cam!(view_scene.scene, to_value(angle), 0f0, 0f0)
+        sleep(.01)
+    end
 end
 
 app() # For tesing purposes, should be removed when compiling
