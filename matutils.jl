@@ -1,13 +1,10 @@
-using Random
+using Random, LinearAlgebra
 
-# "Replaces all NaN elements of `mat` with zeros."
-# function replacenan!(mat::Array{T}) where T
-#     mat[isnan(x)] = zero(T)
-# end
 
 "Returns a copy of `mat` with all coeficients on the diagonal equals to zero."
-function nulldiag(mat::Array)
-    triu(mat, 1) + tril(mat, -1)
+function nulldiag(mat::AbstractMatrix)
+    @assert size(mat, 1) == size(mat, 2)
+    mat .* .!I(size(mat, 1))
 end
 
 "Returns a copy of an array `mat` (containing objects on wich a norm is
@@ -17,17 +14,8 @@ function normalize(mat::Array)
 end
 
 "Returns a copy of `mat` where columns order is randomly shuffled."
-function shufflecols(mat::Array{T, 2}) where T
+function shufflecols(mat::AbstractMatrix)
     mat[:, randperm(size(mat, 2))]
-end
-
-"Randomly sets zeros in place."
-function randzero!(mat::Array{T}, prob::Real=.5) where T
-    for i = eachindex(mat)
-        if rand() < prob
-            mat[i] = zero(T)
-        end
-    end
 end
 
 """
@@ -42,7 +30,7 @@ julia> offsetcols(a)
 5 6 4
 ```
 """
-function offsetcols(mat::Array{T, 2}) where T
+function offsetcols(mat::AbstractMatrix)
     if size(mat, 2) == 1
         return mat
     end
@@ -63,7 +51,7 @@ a-b b-b c-b
 a-c b-c c-c
 ```
 """
-function diffs(mat::Array)
+function diffs(mat::AbstractMatrix)
     dupl = repeat(mat, 1, size(mat, 1))
     permutedims(dupl) - dupl
 end

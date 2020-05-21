@@ -1,23 +1,25 @@
 module Walkers
 
-using LinearAlgebra
+const version = "2.0.0"
+
+
+using LinearAlgebra, Colors
+using AbstractPlotting, GLMakie, MakieLayout
 using Random: seed!
-using Colors
-using GLMakie
-using MakieLayout
-using AbstractPlotting
-# using AbstractPlotting: textslider, colorswatch
 import Base./
 
 include("matutils.jl")
 
-const version = "2.0.0"
 
 const NaNPoint3f0 = Point3f0(NaN32, NaN32, NaN32)
 
 @enum Laws position=0 velocity=1 newtonlinear=2 newton=3 cyclical=4
 
 @enum Relations onetoone=0 sparse=1 manytomany=2 electronic=3
+
+
+"Display an observable each time it is changed."
+monitor = obs::Observable -> on(display, obs)
 
 "Return the values of multiple labeled sliders."
 function ls_values(sliders...)
@@ -36,7 +38,7 @@ end
 
 "Maps `x` from the range `[0, 1]` to `[avg-width, avg+width]`."
 function scatter(x::Any, avg=0::Real, width=1::Real)
-    x .* width .+ avg
+    width * (2x .- 1) .+ avg
 end
 
 "Builds a linear random hue colormap of `steps` elements."
@@ -178,7 +180,7 @@ function app()
     =#
 
     seed = 13121312
-    law = velocity
+    law = position
     rel_model = onetoone
     rings_colors_stops::Array{RGBAf0, 1} = [
         RGBA(.27, .01, .33, .7),
@@ -196,25 +198,32 @@ function app()
         scatter.(rand(rng, Point3f0, count), 0, spread)
     end
 
-    # Relation matrix
-    relations = lift(ls_values(count_ls, rel_avg_ls, rel_var_ls)...) do n, avg, var
-        seed!(rng, seed)
-        # One walker is in relation with another
+    # Relations matrix mask
+    rels_mask = lift(ls_values(count_ls)...) do n
+        seed!(rng, seed + 1)
         if rel_model == onetoone
-            rel = offsetcols(Matrix{Float32}(I, n, n)) .* (2 * rand(rng, n, n) .- 1)
-        # Relation matrix as if each walker behaves as a +/- charged particule
-        elseif rel_model == electronic
-            loads = repeat(rand(rng, n), 1, n)
-            rel = -transpose(loads) .* loads
-        # Each walker is in relation with all others
+            # One walker is in relation with another
+            mask = offsetcols(collect(I(n)))
+        elseif rel_model == sparse
+            # Sparse is ManyToMany with only 25% of relations.
+            # As the diagonal will be nulled, compensation is needed.
+            mask = rand(rng, Float32, n, n) .< .25f0 + 1f0/n
+        # elseif rel_model == electronic
+        #     # Relation matrix as if each walker behaves as a +/- charged particule
+        #     loads = repeat(rand(rng, n), 1, n)
+        #     rel = -transpose(loads) .* loads
         else
-            rel = rand(rng, n, n)
-            # Sparse rel_model is ManyToMany with 75% of the relations set to 0
-            if rel_model == sparse
-                randzero!(rel, .75)
-            end
+            # Each walker is in relation with all others
+            mask = trues(n, n)
         end
-        nulldiag(scatter.(rel, avg, var))
+        nulldiag(mask)
+    end
+
+    # Relations matrix
+    relations = lift(ls_values(count_ls, rel_avg_ls, rel_var_ls)..., rels_mask) do n, avg, var, mask
+        seed!(rng, seed + 2)
+        rels = scatter.(rand(rng, Float32, n, n), avg, var)
+        rels .* mask
     end
 
     # System states
