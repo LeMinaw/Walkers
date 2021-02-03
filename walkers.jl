@@ -1,10 +1,10 @@
 module Walkers
 
-const version = "2.0.0"
+const version = "2.1.0"
 
 
+using GLMakie, AbstractPlotting, MakieLayout
 using LinearAlgebra, Colors
-using AbstractPlotting, GLMakie, MakieLayout
 using Random: seed!
 import Base./
 
@@ -111,12 +111,16 @@ function app()
     iters_ls    = labelslider!(app_scene, "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
     rotspeed_ls = labelslider!(app_scene, "Rotation speed",      LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>.2f0))
 
-    app_layout[1, 1] = vbox!(
-        ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)...,
+    settings_layout = GridLayout(
         tellheight = false,
-        alignmode = Outside(8)
+        alignmode = Outside(10),
     )
+
+    settings_layout[1:6, 1] = ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)
+    
+    
     app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
+    app_layout[1, 1] = settings_layout
     app_layout[1, 2] = view_scene
     app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
     app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
