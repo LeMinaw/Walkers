@@ -3,7 +3,7 @@ module Walkers
 const version = "2.1.0"
 
 
-using GLMakie, AbstractPlotting, MakieLayout
+using GLMakie, GLFW, FileIO
 using LinearAlgebra, Colors
 using Random: seed!
 import Base./
@@ -87,8 +87,14 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
 end
 
 function app()
+    set_window_config!(
+        title = "Walkers Alpha",
+        decorated = true,
+        # renderloop = renderloop,
+    )
+
     set_theme!(
-        fontsize = 13.5,
+        fontsize = 14,
         colgap = 0,
         rowgap = 0
     )
@@ -119,11 +125,11 @@ function app()
     settings_layout[1:6, 1] = ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)
     
     
-    app_layout[1, 1] = LRect(app_scene, color=RGBA(0, 0, 0, .04), strokevisible=false)
+    app_layout[1, 1] = Box(app_scene, color=(:black, .04), strokevisible=false)
     app_layout[1, 1] = settings_layout
     app_layout[1, 2] = view_scene
-    app_layout[2, 1:2] = LText(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
-    app_layout[2, 1:2] = LRect(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
+    app_layout[2, 1:2] = Box(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
+    app_layout[2, 1:2] = Label(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
 
     #=
         # GUI parameters
