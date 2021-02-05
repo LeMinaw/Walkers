@@ -130,8 +130,8 @@ function app()
 
     settings_layout[1:6, 1] = ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)
     
-    
-    app_layout[1, 1] = Box(app_scene, color=(:black, .04), strokevisible=false)
+    # Don't render background for noow because it prevents interaction with sliders
+    # app_layout[1, 1] = Box(app_scene, color=(:black, .04), strokevisible=false)
     app_layout[1, 1] = settings_layout
     app_layout[1, 2] = view_scene
     app_layout[2, 1:2] = Box(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
