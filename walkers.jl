@@ -21,6 +21,12 @@ const NaNPoint3f0 = Point3f0(NaN32, NaN32, NaN32)
 "Display an observable each time it is changed."
 monitor = obs::Observable -> on(display, obs)
 
+"Load an image file from disk and return it to be used as icon in GLFW."
+function load_icon(path)
+    icon = load(path)
+    reinterpret(NTuple{4, UInt8}, icon)
+end
+
 "Return the values of multiple labeled sliders."
 function ls_values(sliders...)
     [s.slider.value for s in sliders]
@@ -271,8 +277,10 @@ function app()
     controls = cameracontrols(view_scene.scene)
     controls.rotationspeed[]= .02
 
-    # Run app
+    # Run app & set icon
     display(app_scene)
+    window = app_scene.current_screens[1].glscreen
+    GLFW.SetWindowIcon(window, load_icon(joinpath("rsc", "logo.png")))
 
     # Autorotate
     angle = lift(rotspeed_ls.slider.value) do speed
