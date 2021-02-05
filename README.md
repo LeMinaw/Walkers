@@ -2,7 +2,7 @@
 
 Dynamic systems vizualisation software, written in Julia.
 
-![cover](https://raw.githubusercontent.com/LeMinaw/Walkers/master/demo/ooo.png)
+![cover](https://raw.githubusercontent.com/LeMinaw/Walkers/master/demo/arms.png)
 
 ## How to run it
 
