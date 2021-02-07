@@ -4,10 +4,12 @@ import QtQuick.Layouts 1.0
 import org.julialang 1.0
 
 ApplicationWindow {
+  id: root
   title: "Walkers Alpha"
   visible: true
   width: 900
   height: 600
+  onClosing: Qt.quit()
 
   property string statusMsg: "Welcome to Walkers Alpha!"
 
@@ -65,26 +67,54 @@ ApplicationWindow {
     anchors.fill: parent
 
     ColumnLayout {
-      id: params
+      id: paramsColumn
       Layout.margins: 10
       Layout.fillHeight: true
-      // Layout.preferredWidth: 400
 
       ParamSlider {
+        variable: "count"
         name: "Walkers count"
         min: 2
         max: 40
+        step: 1
         helpText: "Number of interacting walkers"
       }
 
       ParamSlider {
+        variable: "spread"
+        name: "Walkers spread"
+        max: 100
+        helpText: "Average distance from origin walkers have at start"
+      }
+
+      ParamSlider {
+        variable: "rel_avg"
+        name: "Average attraction"
+        min: -.1
+        max: .1
+        helpText: "Average values that binds walkers together. Negative value means repulsion, zero means no relation, positive is attraction"
+      }
+
+      ParamSlider {
+        variable: "rel_var"
+        name: "Attraction variance"
+        helpText: "How random attraction values are. Zero means no random"
+      }
+
+      ParamSlider {
+        variable: "iters"
         name: "Iterations"
         min: 1
         max: 1000
+        step: 1
         helpText: "Number of iterations to compute"
       }
 
-      ParamSlider { }
+      ParamSlider {
+        variable: "rotspeed"
+        name: "Rotation speed"
+        helpText: "Viewport rotation speed"
+      }
     }
 
     // MakieViewport {
