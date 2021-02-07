@@ -6,8 +6,8 @@ Column {
   required property string variable
   property string name: "Slider"
   property variant min: 0
-  property variant max: 10
-  property variant step: 1
+  property variant max: 1
+  property variant step: 0
   property variant value
   property string helpText
   
