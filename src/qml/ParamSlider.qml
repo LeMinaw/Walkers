@@ -3,11 +3,12 @@ import QtQuick.Controls 1.0
 import org.julialang 1.0
 
 Column {
+  required property string variable
   property string name: "Slider"
-  property int min: 0
-  property int max: 10
-  property int step: 1
-  property int value: 0
+  property variant min: 0
+  property variant max: 10
+  property variant step: 1
+  property variant value
   property string helpText
   
   Text {
@@ -21,7 +22,10 @@ Column {
     minimumValue: min
     maximumValue: max
     stepSize: step
-    value: value
+    value: params[variable]
+    onValueChanged: {
+      params[variable] = value;
+    }
 
     MouseArea {
       anchors.fill: parent
