@@ -1,10 +1,17 @@
 module Walkers
 
+# Disable threading in Qt for Makie compatibility
+ENV["QSG_RENDER_LOOP"] = "basic"
+
 const version = "2.1.0"
+const ui_path = joinpath(dirname(@__FILE__), "qml", "App.qml")
 
+using GLMakie, AbstractPlotting
 
-using GLMakie, GLFW, FileIO
-using LinearAlgebra, Colors
+# Needed when using compiled Makie from sysimage
+AbstractPlotting.__init__()
+
+using QML, Observables, LinearAlgebra, Colors
 using Random: seed!
 import Base./
 
@@ -20,22 +27,6 @@ const NaNPoint3f0 = Point3f0(NaN32, NaN32, NaN32)
 
 "Display an observable each time it is changed."
 monitor = obs::Observable -> on(display, obs)
-
-"Load an image file from disk and return it to be used as icon in GLFW."
-function load_icon(path)
-    icon = load(path)
-    reinterpret(NTuple{4, UInt8}, icon)
-end
-
-"Return the values of multiple labeled sliders."
-function ls_values(sliders...)
-    [s.slider.value for s in sliders]
-end
-
-"Return the layouts of multiple labeled sliders."
-function ls_layouts(sliders...)
-    [s.layout for s in sliders]
-end
 
 "Defines broadcast on real by point division."
 function /(x::Real, pt::Point{})
@@ -93,49 +84,24 @@ function walk(law::Laws, n::Int, pos::Array, rels::Array)
 end
 
 function app()
-    set_window_config!(
-        title = "Walkers Alpha",
-        decorated = true,
-        # renderloop = renderloop,
+    scene = Scene(camera=cam3d!)
+    scene[:show_axis] = false
+
+    count =    Observable(5)
+    spread =   Observable(50.0)
+    rel_avg =  Observable(-.05)
+    rel_var =  Observable(0.0)
+    iters =    Observable(10)
+    rotspeed = Observable(.2)
+
+    params = JuliaPropertyMap(
+        "count" => count,
+        "spread" => spread,
+        "rel_avg" => rel_avg,
+        "rel_var" => rel_var,
+        "iters" => iters,
+        "rotspeed" => rotspeed,
     )
-
-    set_theme!(
-        fontsize = 14,
-        colgap = 0,
-        rowgap = 0
-    )
-
-    app_scene = Scene(camera=campixel!)
-    
-    app_layout = GridLayout(
-        app_scene,
-        2, 2,
-        colsizes = [Fixed(400), Auto()]
-    )
-
-    view_scene = LScene(app_scene, camera=cam3d!, raw=false)
-    view_scene.scene[:show_axis] = false
-
-    count_ls    = labelslider!(app_scene, "Walkers count",       2:40;                       sliderkw=Dict(:startvalue=>5))
-    spread_ls   = labelslider!(app_scene, "Walkers spread",      LinRange(0f0, 100f0, 101);  sliderkw=Dict(:startvalue=>50f0))
-    rel_avg_ls  = labelslider!(app_scene, "Average attraction",  LinRange(-.1f0, .1f0, 101); sliderkw=Dict(:startvalue=>0f0))
-    rel_var_ls  = labelslider!(app_scene, "Attraction variance", LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>0f0))
-    iters_ls    = labelslider!(app_scene, "Iterations",          2:1000;                     sliderkw=Dict(:startvalue=>10))
-    rotspeed_ls = labelslider!(app_scene, "Rotation speed",      LinRange(0f0, 1f0, 101);    sliderkw=Dict(:startvalue=>.2f0))
-
-    settings_layout = GridLayout(
-        tellheight = false,
-        alignmode = Outside(10),
-    )
-
-    settings_layout[1:6, 1] = ls_layouts(count_ls, spread_ls, rel_avg_ls, rel_var_ls, iters_ls, rotspeed_ls)
-    
-    # Don't render background for noow because it prevents interaction with sliders
-    # app_layout[1, 1] = Box(app_scene, color=(:black, .04), strokevisible=false)
-    app_layout[1, 1] = settings_layout
-    app_layout[1, 2] = view_scene
-    app_layout[2, 1:2] = Box(app_scene, color=RGBA(0, 0, 0, .08), strokevisible=false)
-    app_layout[2, 1:2] = Label(app_scene, "Welcome to Walkers Alpha!", alignmode=Outside(3))
 
     #=
         # GUI parameters
@@ -209,13 +175,13 @@ function app()
     rng = MersenneTwister(0)
 
     # Init points
-    points = lift(ls_values(count_ls, spread_ls)...) do count, spread
+    points = lift(count, spread) do count, spread
         seed!(rng, seed)
         scatter.(rand(rng, Point3f0, count), 0, spread)
     end
 
     # Relations matrix mask
-    rels_mask = lift(ls_values(count_ls)...) do n
+    rels_mask = lift(count) do n
         seed!(rng, seed + 1)
         if rel_model == onetoone
             # One walker is in relation with another
@@ -236,7 +202,7 @@ function app()
     end
 
     # Relations matrix
-    relations = lift(ls_values(count_ls, rel_avg_ls, rel_var_ls)..., rels_mask) do n, avg, var, mask
+    relations = lift(count, rel_avg, rel_var, rels_mask) do n, avg, var, mask
         seed!(rng, seed + 2)
         rels = scatter.(rand(rng, Float32, n, n), avg, var)
         rels .* mask
@@ -244,7 +210,7 @@ function app()
 
     # System states
     last_states::Union{Array{Point3f0, 2}, Nothing} = nothing
-    states = lift(ls_values(count_ls, iters_ls)..., points, relations) do n, iters, points, relations
+    states = lift(count, iters, points, relations) do n, iters, points, relations
         if length(points) == size(relations, 1)
             states = walk(law, iters, points, relations)
             states = reshape(states, n, iters)
@@ -270,24 +236,26 @@ function app()
     rings_color = @lift to_colormap(rings_colors_stops, length($rings_vertex))
 
     # Plotting
-    rings = lines!(view_scene, rings_vertex, color=rings_color, transparency=true, linewidth=2)
-    paths = lines!(view_scene, paths_vertex, color=paths_color, transparency=true, linewidth=3)
+    rings = lines!(scene, rings_vertex, color=rings_color, transparency=true, linewidth=2)
+    paths = lines!(scene, paths_vertex, color=paths_color, transparency=true, linewidth=3)
 
     # Controls
-    controls = cameracontrols(view_scene.scene)
+    controls = cameracontrols(scene)
     controls.rotationspeed[]= .02
 
-    # Run app & set icon
-    display(app_scene)
-    window = app_scene.current_screens[1].glscreen
-    GLFW.SetWindowIcon(window, load_icon(joinpath("rsc", "logo.png")))
+    # Run Makie
+    display(scene)
+
+    # Run QML
+    load(ui_path; params=params)
+    exec_async()
 
     # Autorotate
-    angle = lift(rotspeed_ls.slider.value) do speed
+    angle = lift(rotspeed) do speed
         speed / 5f1
     end
-    while isopen(view_scene.scene)
-        rotate_cam!(view_scene.scene, to_value(angle), 0f0, 0f0)
+    while isopen(scene)
+        rotate_cam!(scene, to_value(angle), 0f0, 0f0)
         sleep(.01)
     end
 end
